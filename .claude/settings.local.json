@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(pip install:*)",
+      "Bash(find:*)",
+      "Bash(dir:*)",
+      "Bash(move findMissingEmails.py _UNUSED )",
+      "Bash(move getCompanyTech.py _UNUSED )",
+      "Bash(move instantlyAnalytics.py _UNUSED )",
+      "Bash(move instantlyGetAllEmails.py _UNUSED )",
+      "Bash(move instantlyGetAllLeadsForAList.py _UNUSED)",
+      "Bash(move personalization.py _UNUSED )",
+      "Bash(move randomSelect.py _UNUSED )",
+      "Bash(move supabaseFuncs.py _UNUSED )",
+      "Bash(move:*)"
+    ]
+  }
+}

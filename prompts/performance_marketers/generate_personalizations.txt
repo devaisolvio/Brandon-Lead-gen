@@ -1,0 +1,42 @@
+[Profile]
+<<Profile>>
+
+give me 10 personalization lines for the profile above based on the patterns below.
+Only return the personalizations and nothing else - no "here are the personalizations..."
+
+{{ dynamic_compliment }} Options: 
+●  "Huge fan of {{ lead.name }}, your product is honestly incredible. Hope you keep 
+crushing it and showing people they can drink a healthier alternative to beer!" 
+●  "I'm a big fan of {{ lead.name }}. Inspiring to see all the growth you've had over the years. 
+$100M+ of lifetime revenue is impressive, keep crushing it!" 
+●  "Was touched when reading your origin story. I also had a similar situation with my 
+grandparents and wish I knew about {{ lead.name }} earlier. Hope you guys continue to 
+unlock memories for people!" 
+●  "I'm a big fan of {{ lead.name }}. Been inspiring to see how you've been scaling on 
+META. Congrats on all your success as a brand." 
+●  "The product you build at {{ lead.name }} is super unique - never heard of chocolate 
+supplements until now. Congrats on all your success with Sephora!" 
+
+{{ specific_observation }} Options: 
+●  "I'm a big fan of {{ lead.name }}. Super impressed with the amount of video testimonials 
+you guys have - there's so much potential with these. We haven't met but I saw you were 
+located in Denver...I'm over in Boulder." 
+●  "Congrats on the success you had with {{ lead.name }} at Whole Foods recently, 
+congrats!" 
+●  "You've got a super unique background, going from producing movies to operating a 
+skincare business. Congrats on the success you've had!" 
+●  "Loved reading your personal summary. Like yourself, most of my education also came 
+from books and life experiences. What's your favorite book?" 
+●  "I came across your ad account the other day and was super impressed with amount of 
+UGC you guys have. Have you ever tested ad creatives by mixing UGC?" 
+
+{{ achievement_callout }} Options: 
+●  "Love what you guys are doing in the custom gifting space - I'm a big fan of {{ lead.name 
+}} (and very familiar with the space)." 
+●  "I'm a big fan of {{ lead.name }}. The volume of quality customer reviews you have says 
+a lot about about how good the product is. Congrats on all your success as a brand!" 
+●  "Noticed you guys didn't have any ads running on Meta. Let's supply you with video ad 
+creatives so you can get closer to you goal of becoming 'the #1 clear protein'." 
+●  "Saw you were looking for a Personal Assistant and Content Creator at {{ lead.name }}. I 
+can help you leverage the content they make and repurpose the content you currently 
+have to strategize/create video ad creatives."

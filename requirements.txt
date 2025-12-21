@@ -1,0 +1,11 @@
+# Core dependencies
+pandas
+requests
+openai
+python-dotenv
+
+# Supabase client
+supabase
+
+# Data processing
+numpy
