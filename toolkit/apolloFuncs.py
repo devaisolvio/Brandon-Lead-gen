@@ -37,10 +37,11 @@ def apify_apollo_scraper(industry_key,config, output_apollo_scraped_file_path):
         item["industry"] = industry_key
 
 # single master CSV
-    date_str = date.today().isoformat()
-    path = os.path.join(output_apollo_scraped_file_path, f"apollo_all_industries.csv")
-
-    os.makedirs(output_apollo_scraped_file_path, exist_ok=True)
+    # Use the provided file path and ensure directory exists
+    path = output_apollo_scraped_file_path
+    output_dir = os.path.dirname(path)
+    if output_dir:  # Only create directory if path has a directory component
+        os.makedirs(output_dir, exist_ok=True)
 
     df = pd.DataFrame(items)
 
@@ -53,7 +54,7 @@ def apify_apollo_scraper(industry_key,config, output_apollo_scraped_file_path):
 )
 
 
-    print(f"✅ Saved {len(df)} records to {output_apollo_scraped_file_path}")
+    print(f"✅ Saved {len(df)} records to {path}")
 
 
 def apify_actor_status(run_id):

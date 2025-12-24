@@ -1,4 +1,5 @@
 import pandas as pd
+import os
 from toolkit.neverBounceHTTP import verify_emails
 
 
@@ -22,6 +23,73 @@ def recheck_duplicate_emails(input_cleaned_file_path, input_instantly_leads_file
     print(df_filtered.shape)
     print(df_filtered.head())
     df_filtered.to_csv(output_rechecked_duplicates_file_path, index=False)
+
+## Filter Apollo leads against Instantly leads and deduplicate Apollo data
+def filter_apollo_with_instantly_and_dedupe(input_apollo_file_path, input_instantly_leads_file_path, output_apollo_final_file_path):
+    """
+    Filters out Apollo leads that exist in Instantly leads (by email, company_domain, or company_name)
+    and deduplicates the remaining Apollo leads
+    """
+    print("Loading Apollo leads...")
+    df_apollo = pd.read_csv(input_apollo_file_path)
+    print(f"   Initial Apollo leads: {len(df_apollo)}")
+    
+    print("Loading Instantly leads...")
+    df_instantly = pd.read_csv(input_instantly_leads_file_path)
+    print(f"   Instantly leads: {len(df_instantly)}")
+    
+    # Normalize email columns for comparison
+    df_apollo['email'] = df_apollo['email'].astype(str).str.strip().str.lower()
+    df_instantly['email'] = df_instantly['email'].astype(str).str.strip().str.lower()
+    
+    # Normalize company_domain for comparison (handle NaN values)
+    df_apollo['company_domain'] = df_apollo['company_domain'].astype(str).str.strip().str.lower()
+    df_instantly['company_domain'] = df_instantly['company_domain'].astype(str).str.strip().str.lower()
+    
+    # Normalize company_name for comparison
+    df_apollo['company_name'] = df_apollo['company_name'].astype(str).str.strip().str.lower()
+    df_instantly['company_name'] = df_instantly['company_name'].astype(str).str.strip().str.lower()
+    
+    # Replace 'nan' strings with empty string for cleaner filtering
+    df_apollo['company_domain'] = df_apollo['company_domain'].replace('nan', '')
+    df_apollo['company_name'] = df_apollo['company_name'].replace('nan', '')
+    df_instantly['company_domain'] = df_instantly['company_domain'].replace('nan', '')
+    df_instantly['company_name'] = df_instantly['company_name'].replace('nan', '')
+    
+    # Create sets for faster lookup (exclude empty strings and 'nan')
+    instantly_emails = set(df_instantly[df_instantly['email'].notna() & (df_instantly['email'] != '') & (df_instantly['email'] != 'nan')]['email'].unique())
+    instantly_domains = set(df_instantly[df_instantly['company_domain'].notna() & (df_instantly['company_domain'] != '') & (df_instantly['company_domain'] != 'nan')]['company_domain'].unique())
+    instantly_company_names = set(df_instantly[df_instantly['company_name'].notna() & (df_instantly['company_name'] != '') & (df_instantly['company_name'] != 'nan')]['company_name'].unique())
+    
+    # Filter out Apollo leads that match Instantly leads
+    print("Filtering out leads already in Instantly...")
+    # Start with all True, then filter out matches
+    mask = pd.Series([True] * len(df_apollo), index=df_apollo.index)
+    
+    # Filter by email
+    mask = mask & ~df_apollo['email'].isin(instantly_emails)
+    # Filter by company_domain (only if domain is not empty)
+    mask = mask & ~(df_apollo['company_domain'].isin(instantly_domains) & (df_apollo['company_domain'] != ''))
+    # Filter by company_name (only if name is not empty)
+    mask = mask & ~(df_apollo['company_name'].isin(instantly_company_names) & (df_apollo['company_name'] != ''))
+    
+    # Also filter out rows where email is 'nan' or empty
+    mask = mask & (df_apollo['email'] != 'nan') & (df_apollo['email'] != '')
+    
+    df_filtered = df_apollo[mask].copy()
+    print(f"   After filtering Instantly matches: {len(df_filtered)}")
+    
+    # Deduplicate Apollo leads by email (keep first occurrence)
+    print("Deduplicating Apollo leads...")
+    initial_count = len(df_filtered)
+    df_filtered = df_filtered.drop_duplicates(subset=['email'], keep='first')
+    duplicates_removed = initial_count - len(df_filtered)
+    print(f"   Removed {duplicates_removed} duplicate emails")
+    print(f"   Final Apollo leads: {len(df_filtered)}")
+    
+    # Save to output file
+    df_filtered.to_csv(output_apollo_final_file_path, index=False)
+    print(f"Saved filtered and deduplicated leads to {output_apollo_final_file_path}")
     
 # Check if the email is and verify it  and return only the verified emails    
 def remove_unverified_emails(input_cleaned_file_path, output_verified_file_path, output_verified_subsetted_file_path):
