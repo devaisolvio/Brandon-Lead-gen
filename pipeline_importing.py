@@ -16,7 +16,7 @@ from functions.helper import remove_unverified_emails
 from functions.helper import check_against_previous_customers
 
 from functions.apollo_input_data import industries
-
+from functions.google_scraper_input_data import google_maps_scraping_icp
 
 
 ########################
@@ -74,9 +74,9 @@ select_one_prompt_file_path = f'{PROMPTS_DIR}/performance_marketers/select_one.t
 
 # Google Maps configuration
 google_maps_query = "restaurants in New York"  # Update with your search query
-google_maps_max_results = 100  # Maximum number of results to scrape
+google_maps_max_results = 2  # Maximum number of results to scrape
 
-skip = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]  # Only run step 15 (Google Maps scraping)
+skip = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]  
 
 if 0 not in skip:
     export_paginated_instantly_leads(-1)
@@ -123,9 +123,20 @@ if 12 not in skip:
 
 # Step 15: Scrape Google Maps
 if 15 not in skip:
-    print(f"Scraping Google Maps for: {google_maps_query}")
-    scrape_google_maps_by_query(
-        query=google_maps_query,
-        max_results=google_maps_max_results,
-        output_file_path=output_google_maps_file_path
-    )
+    
+    for query_obj in google_maps_scraping_icp:
+        query =list(query_obj.keys())[0]
+        locations = query_obj[query]['locations']
+        
+        for location in locations:
+            print(f"Scraping Google Maps for: {query}-{location}")
+            scrape_google_maps_by_query(
+                query=f"{query} {location}",
+                max_results=google_maps_max_results,
+                output_file_path=output_google_maps_file_path,
+                icp=query
+            )       
+    
+                
+            
+        

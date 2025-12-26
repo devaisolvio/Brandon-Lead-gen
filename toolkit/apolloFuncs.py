@@ -1,3 +1,4 @@
+import json
 import requests
 import os
 import time
@@ -11,50 +12,72 @@ load_dotenv()
 APIFY_TOKEN = os.getenv("APIFY_API_TOKEN")
 ACTOR_ID = "code_crafter~leads-finder"
 
-
-
-def apify_apollo_scraper(industry_key,config, output_apollo_scraped_file_path):
+def apify_apollo_scraper(industry_key, config, output_apollo_scraped_file_path):
     print("🚀 Starting Apollo scraper (async)")
+    print(f"📊 Industry: {industry_key}")
+    print(f"📁 Output path: {output_apollo_scraped_file_path}")
 
-    # 1️⃣ Start actor asynchronously
-    start_url = f"https://api.apify.com/v2/acts/{ACTOR_ID}/runs"
-    start_resp = requests.post(
-        start_url,
-        params={"token": APIFY_TOKEN},
-        json=config,
-        headers={"Content-Type": "application/json"},
-    )
-    start_resp.raise_for_status()
+    try:
+        # 1️⃣ Start actor asynchronously
+        start_url = f"https://api.apify.com/v2/acts/{ACTOR_ID}/runs"
+        
+        print(f"🔗 Calling Apify API: {start_url}")
 
-    run_id = start_resp.json()["data"]["id"]
-    print(f"🆔 Run ID: {run_id}")
+        
+        start_resp = requests.post(
+            start_url,
+            params={"token": APIFY_TOKEN},
+            json=config,
+            headers={"Content-Type": "application/json"},
+        )
+        
+        
+        start_resp.raise_for_status()
 
-    # 2️⃣ Poll run status fo the apify worker
-    items = apify_actor_status(run_id)
+        run_id = start_resp.json()["data"]["id"]
+        print(f"🆔 Run ID: {run_id}")
 
-    # add industry column to each field
-    for item in items:
-        item["industry"] = industry_key
+        # 2️⃣ Poll run status for the apify worker
+        print(f"⏳ Polling status for run {run_id}...")
+        items = apify_actor_status(run_id)
 
-# single master CSV
-    # Use the provided file path and ensure directory exists
-    path = output_apollo_scraped_file_path
-    output_dir = os.path.dirname(path)
-    if output_dir:  # Only create directory if path has a directory component
-        os.makedirs(output_dir, exist_ok=True)
+        # Add industry column to each field
+        for item in items:
+            item["industry"] = industry_key
 
-    df = pd.DataFrame(items)
+        # Single master CSV
+        path = output_apollo_scraped_file_path
+        output_dir = os.path.dirname(path)
+        
+        if output_dir:  # Only create directory if path has a directory component
+            print(f"📂 Creating directory: {output_dir}")
+            os.makedirs(output_dir, exist_ok=True)
 
-# append if file exists, else create
-    df.to_csv(
-    path,
-    mode="a",
-    header=not os.path.exists(path),
-    index=False
-)
+        df = pd.DataFrame(items)
+        print(f"📊 DataFrame shape: {df.shape}")
+
+        # Append if file exists, else create
+        file_exists = os.path.exists(path)
+        print(f"📝 {'Appending to' if file_exists else 'Creating'} file: {path}")
+        
+        df.to_csv(
+            path,
+            mode="a",
+            header=not file_exists,
+            index=False
+        )
+
+        print(f"✅ Saved {len(df)} records to {path}")
+        return True
+        
+    except requests.exceptions.HTTPError as e:
+        print(f"❌ HTTP Error for industry '{industry_key}':")
+        print(f"   Status Code: {e.response.status_code}")
+        print(f"   Response: {e.response.text}")
+        print(f"   Config used: {json.dumps(config, indent=2)}")
+        return False
 
 
-    print(f"✅ Saved {len(df)} records to {path}")
 
 
 def apify_actor_status(run_id):
