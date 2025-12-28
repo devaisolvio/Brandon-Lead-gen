@@ -79,14 +79,10 @@ select_one_prompt_file_path = f'{PROMPTS_DIR}/performance_marketers/select_one.t
 google_maps_query = "restaurants in New York"  # Update with your search query
 google_maps_max_results = 2  # Maximum number of results to scrape
 
-skip = [0,1,2,3,4,5,6,7,8,9,10,11,12,14,17]  
+skip = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]  
 
 if 0 not in skip:
     export_paginated_instantly_leads(-1)
-if 1 not in skip:
-    filter_builtwith_companies_by_instantly_companies(input_builtwith_leads_file_path, output_instantly_leads_file_path, output_builtwith_filtered_leads_file_path)
-if 2 not in skip:
-    import_leads_from_builtwith(output_builtwith_filtered_leads_file_path, output_import_list_file_path=OUTPUT_DIR)
 if 3 not in skip:
     for industry_obj in industries:
         for industry_key, config in industry_obj.items():
@@ -97,25 +93,17 @@ if 3 not in skip:
 if 4 not in skip:
     filter_apollo_with_instantly_and_dedupe(output_apollo_scraped_file_path, output_instantly_leads_file_path, output_apollo_final_file_path)
 
-
 # Step 5: Clean data
 if 5 not in skip:
     clean_data(output_apollo_final_file_path, output_cleaned_file_path)
 
-# Step 6: Recheck duplicate emails
-if 6 not in skip:
-    recheck_duplicate_emails(output_cleaned_file_path, output_instantly_leads_file_path, output_rechecked_duplicates_file_path)
-# Step 7: Remove non-ecommerce companies
-if 7 not in skip:
-    remove_non_ecommerce_companies(output_rechecked_duplicates_file_path, output_scraped_ai_file_path)
 # Step 8: Remove unverified emails
 if 8 not in skip:
     remove_unverified_emails(output_scraped_ai_file_path, output_verified_file_path, output_verified_subsetted_file_path)
+
+# Step 10: Check against previous customers
 if 10 not in skip:
     check_against_previous_customers(output_retrieved_leads_file_path, input_previous_customers_file_path, output_instantly_leads_file_path, output_rechecked_previous_customers_file_path)
-
-if 12 not in skip:
-    enrich_with_linkedin_data(output_company_tech_file_path, output_linkedin_data_file_path, generate_personalizations_prompt_file_path, select_one_prompt_file_path)
 
 # Step 13: Evaluate leads with Perplexity and score ICP match (0-10)
 if 13 not in skip:
@@ -124,6 +112,7 @@ if 13 not in skip:
 # Step 14: Verify emails in apollo_final.csv using NeverBounce
 if 14 not in skip:
     verify_apollo_final_emails(output_cleaned_file_path)
+
 # Step 15: Scrape Google Maps
 if 15 not in skip:
     
@@ -140,13 +129,12 @@ if 15 not in skip:
                 icp=query
             )       
    
-#Step 16 : Evaluate the gmaps lead
+#Step 16 : Qualify Google Maps leads with Perplexity
 if 16 not in skip:
     evaluate_gmaps_with_perplexity(output_google_maps_file_path)
 
 # Step 17 : Fetch the hubspot leads
 if 17 not in skip:
     get_contacts(output_hubspot_leads)
-                    
             
         
