@@ -32,7 +32,7 @@ essential_fields = [
 APIFY_TOKEN = os.getenv("APIFY_API_TOKEN")
 ACTOR_ID="compass~crawler-google-places"
 
-def apify_google_maps_scraper(config, output_file_path, icp=None):
+def apify_google_maps_scraper(config, output_file_path, icp=None,location="us"):
     """
     Scrape Google Maps using Apify actor (compass/crawler-google-places)
 
@@ -78,6 +78,8 @@ def apify_google_maps_scraper(config, output_file_path, icp=None):
             # Add ICP column if provided
             if icp:
                 filtered_item['icp'] = icp
+            if location:
+                filtered_item['location']=location    
             
             filtered_items.append(filtered_item)
         
@@ -181,7 +183,7 @@ def apify_actor_status(run_id):
     return items
 
 
-def scrape_google_maps_by_query(query, max_results=100, output_file_path="outputs/google_maps_results.csv", language="en", country_code="us", icp=None):
+def scrape_google_maps_by_query(query, max_results=100, output_file_path="outputs/google_maps_results.csv", language="en", country_code="us", icp=None,location="us"):
     """
     Scrape Google Maps by search query
 
@@ -202,6 +204,7 @@ def scrape_google_maps_by_query(query, max_results=100, output_file_path="output
         "language": language,
         "countryCode": country_code.lower()  # Must be lowercase
     }
+    
 
-    return apify_google_maps_scraper(config, output_file_path, icp=icp)
+    return apify_google_maps_scraper(config, output_file_path, icp=icp,location=location)
 

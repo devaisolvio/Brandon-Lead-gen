@@ -31,7 +31,7 @@ industries = [
     "email_status": [
         "validated"
     ],
-    "fetch_count": 10,
+    "fetch_count": 5,
     "file_name": "Amusement Parks_leads_qualified",
     "size": [
          "11-20",
@@ -117,7 +117,7 @@ industries = [
                     "1001-2000",
                     "2001-5000"
                 ],
-                "fetch_count": 10
+                "fetch_count": 5
             }
         },
         {
@@ -181,7 +181,7 @@ industries = [
                     "1001-2000",
                     "2001-5000"
                 ],
-                "fetch_count": 10
+                "fetch_count": 5
             }
         },
         {
@@ -242,7 +242,7 @@ industries = [
     "2001-5000",
     "5001-10000"
   ],
-  "fetch_count": 10
+  "fetch_count": 5
 }
 
         },
@@ -329,7 +329,7 @@ industries = [
                     "2001-5000",
                     "5001-10000"
                 ],
-                "fetch_count": 10
+                "fetch_count": 5
                  
             }
         }

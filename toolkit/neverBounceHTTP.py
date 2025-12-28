@@ -11,15 +11,22 @@ BASE_URL = "https://api.neverbounce.com/v4/jobs"
 
 
 def start_job(emails):
+    # Format according to NeverBounce docs - just array of email strings
     payload = {
         "key": API_KEY,
         "input_location": "supplied",
         "auto_start": 1,
         "auto_parse": 1,
-        "input": [[e] for e in emails],
+        "input": [{"email": e} for e in emails],  # Changed format
     }
 
+    print(f"Sending request to create job with {len(emails)} emails...")
     r = requests.post(f"{BASE_URL}/create", json=payload)
+    
+    # Print raw response for debugging
+    print(f"Response status code: {r.status_code}")
+    print(f"Response body: {r.text}")
+    
     r.raise_for_status()
     response = r.json()
     
@@ -39,6 +46,10 @@ def get_status(job_id):
         f"{BASE_URL}/status",
         params={"key": API_KEY, "job_id": job_id},
     )
+    
+    # Print raw response for debugging
+    print(f"Status check response: {r.text}")
+    
     r.raise_for_status()
     response = r.json()
     
@@ -47,7 +58,8 @@ def get_status(job_id):
         error_msg = response.get("message", "Unknown error")
         raise Exception(f"NeverBounce API error: {error_msg}")
     
-    return response.get("job_status", "unknown")
+    # Return full job_status object for more details
+    return response.get("job_status", "unknown"), response
 
 
 def download_results(job_id, output_path):
@@ -57,6 +69,8 @@ def download_results(job_id, output_path):
         f"{BASE_URL}/download",
         params={"key": API_KEY, "job_id": job_id},
     )
+    
+    print(f"Download response status: {r.status_code}")
     r.raise_for_status()
 
     with open(output_path, "wb") as f:
@@ -76,27 +90,32 @@ def verify_emails(emails, output_path="outputs/verified.csv", max_wait_minutes=3
     job_id = start_job(emails)
     print(f"Job created with ID: {job_id}")
     
-    max_iterations = (max_wait_minutes * 60) // 15  # Convert minutes to 15-second intervals
+    max_iterations = (max_wait_minutes * 60) // 30  # Check every 30 seconds instead of 15
     iteration = 0
     
     while True:
         iteration += 1
-        status = get_status(job_id)
+        status, full_response = get_status(job_id)
+        
+        # Print detailed status info
+        total = full_response.get("total", {})
         print(f"Job status (check {iteration}/{max_iterations}): {status}")
+        if isinstance(total, dict):
+            print(f"  Progress: {total.get('processed', 0)}/{total.get('records', 0)} records")
         
         if status == "complete":
             print("Job completed! Downloading results...")
             break
         elif status in ["failed", "error"]:
-            raise Exception(f"NeverBounce job failed with status: {status}")
-        elif status in ["uploading", "parsing", "running", "under_review"]:
+            raise Exception(f"NeverBounce job failed with status: {status}. Full response: {full_response}")
+        elif status in ["uploading", "parsing", "running", "under_review", "waiting"]:
             # Job is still processing, continue waiting
             if iteration >= max_iterations:
                 raise TimeoutError(
                     f"NeverBounce job timed out after {max_wait_minutes} minutes. "
                     f"Last status: {status}. Job ID: {job_id}"
                 )
-            time.sleep(15)
+            time.sleep(30)  # Increased from 15 to 30 seconds
         else:
             # Unknown status - log warning but continue
             print(f"Warning: Unknown status '{status}', continuing to wait...")
@@ -105,7 +124,7 @@ def verify_emails(emails, output_path="outputs/verified.csv", max_wait_minutes=3
                     f"NeverBounce job timed out after {max_wait_minutes} minutes. "
                     f"Last status: {status}. Job ID: {job_id}"
                 )
-            time.sleep(15)
+            time.sleep(30)
     
     download_results(job_id, output_path)
     print(f"Results downloaded to {output_path}")
@@ -124,9 +143,11 @@ def verify_apollo_final_emails(file_path):
     # Filter out empty strings and invalid emails
     email_list = [email.strip().lower() for email in email_list if email and email != 'nan' and '@' in email]
     
-    print(f"Total emails to verify: {len(email_list)}")
+    # Remove duplicates to avoid redundant checks
+    unique_emails = list(set(email_list))
+    print(f"Total unique emails to verify: {len(unique_emails)} (from {len(email_list)} total)")
     
-    if len(email_list) == 0:
+    if len(unique_emails) == 0:
         print("No emails to verify!")
         return df
     
@@ -136,7 +157,7 @@ def verify_apollo_final_emails(file_path):
     # Verify emails using NeverBounce
     print("Starting NeverBounce email verification...")
     print("This may take a few minutes...")
-    verify_emails(email_list, temp_verified_path)
+    verify_emails(unique_emails, temp_verified_path)
     
     # Read verification results
     print("Reading verification results...")
@@ -147,7 +168,8 @@ def verify_apollo_final_emails(file_path):
         if "email" not in verified_df.columns or len(verified_df.columns) < 2:
             verified_df = pd.read_csv(temp_verified_path, header=None)
             verified_df.columns = ["email", "status"]
-    except:
+    except Exception as e:
+        print(f"Error reading verification results: {e}")
         # Fallback: read without header
         verified_df = pd.read_csv(temp_verified_path, header=None)
         verified_df.columns = ["email", "status"]
