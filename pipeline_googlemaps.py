@@ -8,13 +8,13 @@ INPUT_DIR = 'inputs'
 OUTPUT_DIR = 'outputs'
 PROMPTS_DIR = 'prompts'
 
-google_maps_query = "restaurants in New York"  # Update with your search query
+
 google_maps_max_results = 2  # Maximum number of results to scrape
 
 # Output file paths - Step 15: Google Maps scraping
 output_google_maps_file_path = f'{OUTPUT_DIR}/google_maps_results.csv'
 
-skip=[0]
+skip=[1]
 
 
 if 0 not in skip:
