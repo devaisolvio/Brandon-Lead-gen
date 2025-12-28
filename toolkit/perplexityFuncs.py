@@ -4,6 +4,8 @@ import pandas as pd
 import time
 import re
 from dotenv import load_dotenv
+from functions.apollo_icp_definitions import get_icp_for_industry
+from functions.gmaps_icp_definitions import get_icp_for_gmaps_search
 
 # Load environment variables
 load_dotenv()
@@ -98,7 +100,11 @@ def create_icp_evaluation_prompt(lead_data):
         if max_len and len(value_str) > max_len:
             return value_str[:max_len] + '...'
         return value_str
-    
+
+    # Get industry-specific ICP
+    industry = safe_get('industry')
+    icp_criteria = get_icp_for_industry(industry)
+
     prompt = f"""Evaluate if this B2B lead matches our Ideal Customer Profile (ICP) and provide a score from 0-10.
 
 Lead Information:
@@ -113,12 +119,8 @@ Lead Information:
 - Seniority Level: {safe_get('seniority_level')}
 - Company Technologies: {safe_get('company_technologies', max_len=300)}
 
-ICP Criteria (Temporary - to be refined):
-- Target: E-commerce companies, SaaS businesses, or performance marketing agencies
-- Decision makers: Founders, CEOs, C-suite executives, or senior marketing directors
-- Company size: Preferably 10-500 employees (but flexible)
-- Industry: E-commerce, retail, digital marketing, or related B2B services
-- Technology stack: Should use modern e-commerce or marketing tools
+ICP Criteria:
+{icp_criteria}
 
 Please evaluate this lead and provide:
 1. A score from 0-10 (where 10 is a perfect ICP match)
@@ -127,6 +129,55 @@ Please evaluate this lead and provide:
 Format your response as: "Score: X/10 - [explanation]"
 """
     return prompt
+
+
+def create_icp_evaluation_prompt_gmaps(lead_data, scraped_website_text: str = ""):
+    """
+    Create a prompt to evaluate if a Google Maps venue matches the ICP
+    """
+    def safe_get(key, default='N/A', max_len=None):
+        value = lead_data.get(key, default)
+        if pd.isna(value) or value == '' or value == 'nan':
+            return default
+        value_str = str(value)
+        if max_len and len(value_str) > max_len:
+            return value_str[:max_len] + "..."
+        return value_str
+
+    # Get search-specific ICP based on the search intent
+    search_intent = safe_get('icp')
+    icp_criteria = get_icp_for_gmaps_search(search_intent)
+
+    prompt = f"""Evaluate if this venue matches our Ideal Customer Profile (ICP) and provide a score from 0-10.
+
+Google Maps Business Information:
+- Name: {safe_get('title')}
+- Website: {safe_get('website')}
+- Address: {safe_get('address')}
+- City: {safe_get('city')}
+- State: {safe_get('state')}
+- Country: {safe_get('countryCode')}
+- Rating: {safe_get('totalScore')}
+- Reviews Count: {safe_get('reviewsCount')}
+- Categories: {safe_get('categories')}
+- Primary Category: {safe_get('categoryName')}
+- Google Maps URL: {safe_get('url')}
+- Search Intent / ICP Label: {safe_get('icp')}
+
+Website Content (may be partial or empty):
+{scraped_website_text[:4000]}
+
+Our ICP:
+{icp_criteria}
+
+Please evaluate this venue and provide:
+1. A score from 0-10 (where 10 is a perfect ICP match)
+2. A brief 1-2 sentence explanation
+
+Format your response exactly as: "Score: X/10 - [explanation]"
+"""
+    return prompt
+
 
 def evaluate_leads_with_perplexity(file_path):
     """
@@ -188,3 +239,57 @@ def evaluate_leads_with_perplexity(file_path):
     
     return df
 
+
+def evaluate_gmaps_with_perplexity(file_path):
+    """
+    Read Google Maps CSV, evaluate each venue using Perplexity API,
+    and add ICP score columns directly to the same file
+    """
+    print("Loading Google Maps venues...")
+    df = pd.read_csv(file_path)
+    print(f"Total venues to evaluate: {len(df)}")
+    
+    if 'icp_score' not in df.columns:
+        df['icp_score'] = None
+    if 'icp_evaluation' not in df.columns:
+        df['icp_evaluation'] = None
+
+    # Process each venue (skip if already has a score)
+    total_venues = len(df)
+    leads_to_evaluate = df[df['icp_score'].isna() | (df['icp_score'] == '')].copy()
+    venues_already_scored = total_venues - len(leads_to_evaluate)
+    
+    if venues_already_scored > 0:
+        print(f"Skipping {venues_already_scored} venues that already have scores")
+
+    for idx, (index, row) in enumerate(leads_to_evaluate.iterrows()):
+        print(f"\nEvaluating venue {idx+1}/{len(leads_to_evaluate)}: {row.get('title', 'N/A')}")
+        
+        # Create evaluation prompt
+        prompt = create_icp_evaluation_prompt_gmaps(row.to_dict())
+        
+        # Call Perplexity API
+        response = call_perplexity_api(prompt)
+        
+        if response:
+            score = extract_score_from_response(response)
+            df.at[index, 'icp_score'] = score
+            df.at[index, 'icp_evaluation'] = (response or "")[:500]
+            
+            print(f"  Score: {score}/10")
+            print(f"  Evaluation: {str(response)[:200]}...")
+        else:
+            df.at[index, 'icp_score'] = 5.0
+            df.at[index, 'icp_evaluation'] = "Error: Could not evaluate"
+            print(f"  Error: Could not get evaluation, using default score 5.0")
+
+        if idx < len(leads_to_evaluate) - 1:
+            time.sleep(1)
+
+    df = df.sort_values(by='icp_score', ascending=False, na_position='last')
+    df.to_csv(file_path, index=False)
+    print(f"\nCompleted! Updated {len(df)} venues with ICP scores in {file_path}")
+    print(f"Score distribution:")
+    print(df['icp_score'].describe())
+    
+    return df

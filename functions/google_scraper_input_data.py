@@ -4,6 +4,11 @@ google_maps_scraping_icp=[
     "locations": ["Las Vegas", "New York", "Dallas", "Chicago"]
   }
   },
+  {  
+  "Search for Coffee Shops": {
+    "locations": ["Las Vegas", "New York", "Dallas", "Chicago"]
+  }
+  },
   
 
 

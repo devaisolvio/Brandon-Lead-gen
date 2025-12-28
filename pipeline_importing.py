@@ -4,9 +4,10 @@ from toolkit.instantlyFuncs import export_paginated_instantly_leads
 from toolkit.scrapeAIFuncs import remove_non_ecommerce_companies
 from toolkit.linkedInScraper import enrich_with_linkedin_data
 from toolkit.apolloFuncs import apify_apollo_scraper
-from toolkit.perplexityFuncs import evaluate_leads_with_perplexity
+from toolkit.perplexityFuncs import evaluate_leads_with_perplexity,evaluate_gmaps_with_perplexity
 from toolkit.neverBounceHTTP import verify_apollo_final_emails
 from toolkit.googleMapsFuncs import scrape_google_maps_by_query
+from toolkit.hubspotFuncs import get_contacts
 
 from functions.helper import recheck_duplicate_emails
 from functions.helper import filter_apollo_with_instantly_and_dedupe
@@ -68,6 +69,8 @@ output_linkedin_data_file_path = f'{OUTPUT_DIR}/apollo_linkedin_enriched.csv'
 # Output file paths - Step 15: Google Maps scraping
 output_google_maps_file_path = f'{OUTPUT_DIR}/google_maps_results.csv'
 
+#Output file path -Step 16 : Hubspot lead pull
+output_hubspot_leads = f'{OUTPUT_DIR}/hubspot_leads.csv'
 # Prompt file paths
 generate_personalizations_prompt_file_path = f'{PROMPTS_DIR}/performance_marketers/generate_personalizations.txt'
 select_one_prompt_file_path = f'{PROMPTS_DIR}/performance_marketers/select_one.txt'
@@ -76,7 +79,7 @@ select_one_prompt_file_path = f'{PROMPTS_DIR}/performance_marketers/select_one.t
 google_maps_query = "restaurants in New York"  # Update with your search query
 google_maps_max_results = 2  # Maximum number of results to scrape
 
-skip = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]  
+skip = [0,1,2,3,4,5,6,7,8,9,10,11,12,14,17]  
 
 if 0 not in skip:
     export_paginated_instantly_leads(-1)
@@ -94,13 +97,6 @@ if 3 not in skip:
 if 4 not in skip:
     filter_apollo_with_instantly_and_dedupe(output_apollo_scraped_file_path, output_instantly_leads_file_path, output_apollo_final_file_path)
 
-# Step 13: Evaluate leads with Perplexity and score ICP match (0-10)
-if 13 not in skip:
-    evaluate_leads_with_perplexity(output_apollo_final_file_path)
-
-# Step 14: Verify emails in apollo_final.csv using NeverBounce
-if 14 not in skip:
-    verify_apollo_final_emails(output_apollo_final_file_path)
 
 # Step 5: Clean data
 if 5 not in skip:
@@ -121,6 +117,13 @@ if 10 not in skip:
 if 12 not in skip:
     enrich_with_linkedin_data(output_company_tech_file_path, output_linkedin_data_file_path, generate_personalizations_prompt_file_path, select_one_prompt_file_path)
 
+# Step 13: Evaluate leads with Perplexity and score ICP match (0-10)
+if 13 not in skip:
+    evaluate_leads_with_perplexity(output_cleaned_file_path)
+
+# Step 14: Verify emails in apollo_final.csv using NeverBounce
+if 14 not in skip:
+    verify_apollo_final_emails(output_cleaned_file_path)
 # Step 15: Scrape Google Maps
 if 15 not in skip:
     
@@ -136,7 +139,14 @@ if 15 not in skip:
                 output_file_path=output_google_maps_file_path,
                 icp=query
             )       
-    
-                
+   
+#Step 16 : Evaluate the gmaps lead
+if 16 not in skip:
+    evaluate_gmaps_with_perplexity(output_google_maps_file_path)
+
+# Step 17 : Fetch the hubspot leads
+if 17 not in skip:
+    get_contacts(output_hubspot_leads)
+                    
             
         

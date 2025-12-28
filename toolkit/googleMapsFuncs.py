@@ -15,7 +15,6 @@ load_dotenv()
 essential_fields = [
         'title',
         'phone',
-        'phoneUnformatted', 
         'website',
         'address',
         'street',
@@ -28,12 +27,7 @@ essential_fields = [
         'categories',
         'categoryName',
         'url',
-        'placeId',
-        'cid',
-        'permanentlyClosed',
-        'temporarilyClosed',
-        'neighborhood',
-        'openingHours'
+
     ]
 APIFY_TOKEN = os.getenv("APIFY_API_TOKEN")
 ACTOR_ID="compass~crawler-google-places"
