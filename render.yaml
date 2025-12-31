@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: lead-generation-api
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn server:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: PORT
+        fromService:
+          type: web
+          name: lead-generation-api
+          property: port
+    # Add your environment variables in Render dashboard:
+    # - APIFY_API_TOKEN
+    # - NEVERBOUNCE_API_KEY
+    # - PERPLEXITY_API_KEY
+    # - OPENAI_API_KEY
+    # - INSTANTLY_API_KEY
+    # - BRIGHTDATA_BEARER_TOKEN
+    # - WEBHOOK_URL
+    # - HUBSPOT_API_KEY (if needed)
+    # - GOOGLE_DRIVE_CREDENTIALS (if needed)
+

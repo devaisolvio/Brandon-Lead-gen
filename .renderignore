@@ -1,0 +1,48 @@
+# Render ignore file - files to exclude from deployment
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment files (use Render's environment variables instead)
+.env
+.env.local
+
+# Output files (will be created at runtime)
+outputs/
+*.csv
+*.txt
+
+# Input files (if not needed in production)
+inputs/
+
+# Documentation
+*.md
+!README.md
+
+# Test files
+test_*.py
+*_test.py
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+

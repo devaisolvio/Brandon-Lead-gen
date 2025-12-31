@@ -189,6 +189,10 @@ def get_all_status():
 
 
 if __name__ == '__main__':
+    import os
+    port = int(os.environ.get('PORT', 5000))
+    debug = os.environ.get('FLASK_ENV') == 'development'
+    
     print("Starting Flask server...")
     print("Available endpoints:")
     print("  GET/POST /apollo - Run Apollo pipeline")
@@ -196,6 +200,6 @@ if __name__ == '__main__':
     print("  GET/POST /hubspot - Run HubSpot pipeline")
     print("  GET /status/<pipeline> - Check pipeline status")
     print("  GET /status - Check all pipeline statuses")
-    print("\nServer running on http://localhost:5000")
+    print(f"\nServer running on port {port}")
     
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=port, debug=debug)
