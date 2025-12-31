@@ -1,3 +1,4 @@
+from datetime import date
 
 from toolkit.cleaning import clean_data
 from toolkit.instantlyFuncs import export_paginated_instantly_leads
@@ -9,7 +10,7 @@ from toolkit.neverBounceHTTP import verify_apollo_final_emails
 from functions.helper import filter_apollo_with_instantly_and_dedupe
 from functions.helper import remove_unverified_emails
 from functions.helper import check_against_previous_customers
-
+from functions.file_upload import upload_csv_to_google_drive
 from functions.apollo_input_data import industries
 
 
@@ -55,30 +56,58 @@ output_rechecked_previous_customers_file_path = f'{OUTPUT_DIR}/apollo_excluding_
 # Google Maps configuration
 
 
-skip = [0,1,2,3,4,5,8,10,]  
-
-if 0 not in skip:
+def run_apollo_pipeline():
+    """Run the complete Apollo pipeline"""
+    # Step 0: Export Instantly leads
     export_paginated_instantly_leads(-1)
-if 1 not in skip:
+    
+    # Step 1: Apollo scraping
     for industry_obj in industries:
         for industry_key, config in industry_obj.items():
             print(f"Scraping {industry_key}...")
-            apify_apollo_scraper(industry_key,config, output_apollo_scraped_file_path)
-
-# Step 4: Filter Apollo leads against Instantly leads and deduplicate
-if 2 not in skip:
+            apify_apollo_scraper(industry_key, config, output_apollo_scraped_file_path)
+    
+    # Step 2: Filter Apollo leads against Instantly leads and deduplicate
     filter_apollo_with_instantly_and_dedupe(output_apollo_scraped_file_path, output_instantly_leads_file_path, output_apollo_deduped_file_path)
-
-# Step 5: Clean data
-if 3 not in skip:
+    
+    # Step 3: Clean data
     clean_data(output_apollo_deduped_file_path, output_final_file_path)
     
-if 4 not in skip:
+    # Step 4: Verify emails
     verify_apollo_final_emails(output_final_file_path)
-
-if 5 not in skip:
+    
+    # Step 5: Evaluate leads with Perplexity
     evaluate_leads_with_perplexity(output_final_file_path)
     
+    # Step 6: Upload to Google Drive and delete local file
+    upload_csv_to_google_drive(output_final_file_path, filename=f"apollo_final-{date.today().isoformat()}", delete_after_upload=True)
+    
+    print("\n" + "=" * 60)
+    print("✅ Apollo Pipeline Complete!")
+    print("=" * 60)
+
+
+# Run pipeline if executed directly
+if __name__ == "__main__":
+    skip = [0,1,2,3,4,5,8,10,]  
+    
+    if 0 not in skip:
+        export_paginated_instantly_leads(-1)
+    if 1 not in skip:
+        for industry_obj in industries:
+            for industry_key, config in industry_obj.items():
+                print(f"Scraping {industry_key}...")
+                apify_apollo_scraper(industry_key,config, output_apollo_scraped_file_path)
+    if 2 not in skip:
+        filter_apollo_with_instantly_and_dedupe(output_apollo_scraped_file_path, output_instantly_leads_file_path, output_apollo_deduped_file_path)
+    if 3 not in skip:
+        clean_data(output_apollo_deduped_file_path, output_final_file_path)
+    if 4 not in skip:
+        verify_apollo_final_emails(output_final_file_path)
+    if 5 not in skip:
+        evaluate_leads_with_perplexity(output_final_file_path)
+    if 6 not in skip:
+        upload_csv_to_google_drive(output_final_file_path,filename=f"apollo_final-{date.today().isoformat()}")
 
 """ # Step 8: Remove unverified emails
 if 8 not in skip:
