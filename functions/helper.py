@@ -1,7 +1,8 @@
 import pandas as pd
 import os
 from toolkit.neverBounceHTTP import verify_emails
-
+from datetime import datetime
+from pathlib import Path
 
 
 ## Check the data from the apolo cleaned file and check with instantly and output a clean file of leads which are not contacted
@@ -90,6 +91,83 @@ def filter_apollo_with_instantly_and_dedupe(input_apollo_file_path, input_instan
     # Save to output file
     df_filtered.to_csv(output_apollo_final_file_path, index=False)
     print(f"Saved filtered and deduplicated leads to {output_apollo_final_file_path}")
+
+## Filter HubSpot leads against Instantly leads and deduplicate HubSpot data
+def filter_hubspot_with_instantly_and_dedupe(input_hubspot_file_path, input_instantly_leads_file_path, output_hubspot_final_file_path):
+    """
+    Filters out HubSpot leads that exist in Instantly leads (by email)
+    and deduplicates the remaining HubSpot leads
+    """
+    print("\n" + "=" * 60)
+    print("🔄 Filtering HubSpot leads against Instantly leads")
+    print("=" * 60)
+    
+    print("Loading HubSpot leads...")
+    df_hubspot = pd.read_csv(input_hubspot_file_path)
+    print(f"   Initial HubSpot leads: {len(df_hubspot)}")
+    
+    # Check if Instantly leads file exists
+    if not os.path.exists(input_instantly_leads_file_path):
+        print(f"⚠️  Warning: Instantly leads file not found at {input_instantly_leads_file_path}")
+        print("   Skipping Instantly filtering. Will only deduplicate HubSpot leads.")
+        df_instantly = pd.DataFrame(columns=['email'])
+    else:
+        print("Loading Instantly leads...")
+        df_instantly = pd.read_csv(input_instantly_leads_file_path)
+        print(f"   Instantly leads: {len(df_instantly)}")
+    
+    # Normalize email columns for comparison
+    df_hubspot['email'] = df_hubspot['email'].astype(str).str.strip().str.lower()
+    
+    if len(df_instantly) > 0 and 'email' in df_instantly.columns:
+        df_instantly['email'] = df_instantly['email'].astype(str).str.strip().str.lower()
+        
+        # Create set for faster lookup (exclude empty strings and 'nan')
+        instantly_emails = set(df_instantly[
+            df_instantly['email'].notna() & 
+            (df_instantly['email'] != '') & 
+            (df_instantly['email'] != 'nan')
+        ]['email'].unique())
+        
+        # Filter out HubSpot leads that match Instantly leads
+        print("Filtering out leads already in Instantly...")
+        initial_count = len(df_hubspot)
+        
+        # Filter by email - exclude matches and invalid emails
+        mask = (
+            ~df_hubspot['email'].isin(instantly_emails) &
+            (df_hubspot['email'] != 'nan') &
+            (df_hubspot['email'] != '') &
+            df_hubspot['email'].notna()
+        )
+        
+        df_filtered = df_hubspot[mask].copy()
+        filtered_count = initial_count - len(df_filtered)
+        print(f"   Removed {filtered_count} leads that exist in Instantly")
+        print(f"   After filtering Instantly matches: {len(df_filtered)}")
+    else:
+        print("   No Instantly leads to filter against. Skipping Instantly filtering.")
+        # Still filter out invalid emails
+        mask = (
+            (df_hubspot['email'] != 'nan') &
+            (df_hubspot['email'] != '') &
+            df_hubspot['email'].notna()
+        )
+        df_filtered = df_hubspot[mask].copy()
+        print(f"   Removed invalid emails. Remaining: {len(df_filtered)}")
+    
+    # Deduplicate HubSpot leads by email (keep first occurrence)
+    print("Deduplicating HubSpot leads...")
+    initial_count = len(df_filtered)
+    df_filtered = df_filtered.drop_duplicates(subset=['email'], keep='first')
+    duplicates_removed = initial_count - len(df_filtered)
+    print(f"   Removed {duplicates_removed} duplicate emails")
+    print(f"   Final HubSpot leads: {len(df_filtered)}")
+    
+    # Save to output file
+    df_filtered.to_csv(output_hubspot_final_file_path, index=False)
+    print(f"✅ Saved filtered and deduplicated leads to {output_hubspot_final_file_path}")
+    print("=" * 60 + "\n")
     
 # Check if the email is and verify it  and return only the verified emails    
 def remove_unverified_emails(input_cleaned_file_path, output_verified_file_path, output_verified_subsetted_file_path):
@@ -163,3 +241,21 @@ def clean_previous_customers(input_previous_customers_file_path):
     df_previous_customers.to_csv(input_previous_customers_file_path, index=False)    
     
 
+
+def should_export_instantly_leads(instantly_file: Path) -> bool:
+    """
+    Check if Instantly leads should be exported.
+    Returns True if file doesn't exist or wasn't created today.
+    """
+    if not instantly_file.exists():
+        return True
+    
+    # Get file modification time
+    file_mtime = datetime.fromtimestamp(os.path.getmtime(instantly_file))
+    today = datetime.now().date()
+    file_date = file_mtime.date()
+    
+    if file_date < today:
+        return True
+    else:
+        return False

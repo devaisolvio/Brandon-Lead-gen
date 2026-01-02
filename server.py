@@ -1,12 +1,25 @@
 
 
 from flask import Flask, jsonify
+from flask_cors import CORS
 import threading
+import os
 from datetime import datetime
 
 app = Flask(__name__)
 
-# Track running pipelines
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",  
+    "http://127.0.0.1:3000",   
+]
+
+env_origins = os.environ.get('ALLOWED_CORS_ORIGINS', '')
+if env_origins:
+    ALLOWED_ORIGINS.extend([origin.strip() for origin in env_origins.split(',') if origin.strip()])
+
+CORS(app, origins=ALLOWED_ORIGINS)  
+
+
 running_pipelines = {}
 
 

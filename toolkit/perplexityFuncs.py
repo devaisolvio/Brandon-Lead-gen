@@ -6,7 +6,7 @@ import re
 from dotenv import load_dotenv
 from functions.apollo_icp_definitions import get_icp_for_industry
 from functions.gmaps_icp_definitions import get_icp_for_gmaps_search
-
+from functions.hubspot_icp_defination import get_hubspot_icp
 # Load environment variables
 load_dotenv()
 
@@ -179,6 +179,59 @@ Format your response exactly as: "Score: X/10 - [explanation]"
     return prompt
 
 
+
+def create_icp_evaluation_prompt_hubspot(lead_data):
+    """
+    Create a prompt to evaluate if a HubSpot lead matches the ICP
+    HubSpot leads typically only have: firstname, lastname, email
+    """
+    def safe_get(key, default='N/A'):
+        value = lead_data.get(key, default)
+        if pd.isna(value) or value == '' or value == 'nan':
+            return default
+        return str(value)
+    
+    # Get HubSpot-specific ICP
+    icp_criteria = get_hubspot_icp()
+    
+    # Extract company domain from email if available
+    email = safe_get('email', '').lower()
+    company_domain = 'N/A'
+    if '@' in email:
+        domain = email.split('@')[1] if '@' in email else 'N/A'
+        company_domain = domain
+    
+    # Combine firstname and lastname
+    firstname = safe_get('firstname', '')
+    lastname = safe_get('lastname', '')
+    full_name = f"{firstname} {lastname}".strip() if firstname or lastname else 'N/A'
+    
+    prompt = f"""Evaluate if this HubSpot lead matches our Ideal Customer Profile (ICP) and provide a score from 0-10.
+
+Lead Information:
+- Full Name: {full_name}
+- Email: {safe_get('email')}
+- First Name: {firstname}
+- Last Name: {lastname}
+
+ICP Criteria:
+{icp_criteria}
+
+Please evaluate this lead based on:
+1. Email domain quality (corporate domains are preferred over personal email providers like gmail.com, yahoo.com, etc.)
+2. Name quality and professionalism
+3. Overall likelihood this is a business contact vs personal contact
+4. Potential match to our ICP based on available information
+
+Provide:
+1. A score from 0-10 (where 10 is a perfect ICP match)
+2. A brief 1-2 sentence explanation
+
+Format your response as: "Score: X/10 - [explanation]"
+"""
+    return prompt
+6
+
 def evaluate_leads_with_perplexity(file_path):
     """
     Read apollo_final.csv, evaluate each lead using Perplexity API,
@@ -289,6 +342,64 @@ def evaluate_gmaps_with_perplexity(file_path):
     df = df.sort_values(by='icp_score', ascending=False, na_position='last')
     df.to_csv(file_path, index=False)
     print(f"\nCompleted! Updated {len(df)} venues with ICP scores in {file_path}")
+    print(f"Score distribution:")
+    print(df['icp_score'].describe())
+    
+    return df
+
+def evaluate_hubspot_with_perplexity(file_path):
+    """
+    Read HubSpot leads CSV, evaluate each lead using Perplexity API,
+    and add ICP score columns directly to the same file
+    """
+    print("Loading HubSpot leads...")
+    df = pd.read_csv(file_path)
+    print(f"Total leads to evaluate: {len(df)}")
+    
+    if 'icp_score' not in df.columns:
+        df['icp_score'] = None
+    if 'icp_evaluation' not in df.columns:
+        df['icp_evaluation'] = None
+
+    # Process each lead (skip if already has a score)
+    total_leads = len(df)
+    leads_to_evaluate = df[df['icp_score'].isna() | (df['icp_score'] == '')].copy()
+    leads_already_scored = total_leads - len(leads_to_evaluate)
+    
+    if leads_already_scored > 0:
+        print(f"Skipping {leads_already_scored} leads that already have scores")
+
+    for idx, (index, row) in enumerate(leads_to_evaluate.iterrows()):
+        firstname = str(row.get('firstname', 'N/A'))
+        lastname = str(row.get('lastname', 'N/A'))
+        email = str(row.get('email', 'N/A'))
+        full_name = f"{firstname} {lastname}".strip()
+        print(f"\nEvaluating lead {idx+1}/{len(leads_to_evaluate)}: {full_name} ({email})")
+        
+        # Create evaluation prompt
+        prompt = create_icp_evaluation_prompt_hubspot(row.to_dict())
+        
+        # Call Perplexity API
+        response = call_perplexity_api(prompt)
+        
+        if response:
+            score = extract_score_from_response(response)
+            df.at[index, 'icp_score'] = score
+            df.at[index, 'icp_evaluation'] = (response or "")[:500]
+            
+            print(f"  Score: {score}/10")
+            print(f"  Evaluation: {str(response)[:200]}...")
+        else:
+            df.at[index, 'icp_score'] = 5.0
+            df.at[index, 'icp_evaluation'] = "Error: Could not evaluate"
+            print(f"  Error: Could not get evaluation, using default score 5.0")
+
+        if idx < len(leads_to_evaluate) - 1:
+            time.sleep(1)
+
+    df = df.sort_values(by='icp_score', ascending=False, na_position='last')
+    df.to_csv(file_path, index=False)
+    print(f"\nCompleted! Updated {len(df)} HubSpot leads with ICP scores in {file_path}")
     print(f"Score distribution:")
     print(df['icp_score'].describe())
     
