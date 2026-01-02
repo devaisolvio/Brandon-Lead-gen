@@ -10,7 +10,8 @@ app = Flask(__name__)
 
 ALLOWED_ORIGINS = [
     "http://localhost:3000",  
-    "http://127.0.0.1:3000",   
+    "http://127.0.0.1:3000", 
+    "https://brandon-lead-gen.pages.dev",  
 ]
 
 env_origins = os.environ.get('ALLOWED_CORS_ORIGINS', '')
