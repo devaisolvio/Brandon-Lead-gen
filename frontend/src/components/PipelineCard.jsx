@@ -33,26 +33,34 @@ const STATUS_COLORS = {
 
 function PipelineCard({ pipeline, status, onStart, loading }) {
   const [localStatus, setLocalStatus] = useState(status?.status || 'idle')
-  const [elapsedTime, setElapsedTime] = useState(null)
+const [elapsedTime, setElapsedTime] = useState(null)
 
-  useEffect(() => {
-    setLocalStatus(status?.status || 'idle')
-    
-    if (status?.started_at && status?.status === 'running') {
-      const interval = setInterval(() => {
-        const start = new Date(status.started_at)
-        const now = new Date()
-        const diff = Math.floor((now - start) / 1000)
-        const minutes = Math.floor(diff / 60)
-        const seconds = diff % 60
-        setElapsedTime(`${minutes}m ${seconds}s`)
-      }, 1000)
-      
-      return () => clearInterval(interval)
-    } else {
-      setElapsedTime(null)
-    }
-  }, [status])
+useEffect(() => {
+  // keep localStatus in sync
+  if (status?.status) {
+    setLocalStatus(status.status)
+  }
+}, [status?.status])
+
+useEffect(() => {
+  if (localStatus !== 'running') {
+    return
+  }
+
+  let seconds = 0
+
+  const interval = setInterval(() => {
+    seconds += 1
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+
+    setElapsedTime(`${mins}m ${secs.toString().padStart(2, '0')}s`)
+  }, 1000)
+
+  return () => clearInterval(interval)
+}, [localStatus])
+
+
 
   const statusConfig = STATUS_COLORS[localStatus] || STATUS_COLORS.default
   const isRunning = localStatus === 'running'
